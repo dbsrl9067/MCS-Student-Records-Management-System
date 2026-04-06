@@ -13,7 +13,11 @@
     "lucide-react": "latest",
     "recharts": "latest",
     "next-pwa": "latest",
-    "pandas": "latest",
     "jspdf": "latest"
+  },
+  "devDependencies": {
+    "tailwindcss": "latest",
+    "postcss": "latest",
+    "autoprefixer": "latest"
   }
 }
