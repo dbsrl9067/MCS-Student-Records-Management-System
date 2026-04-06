@@ -1,17 +1,18 @@
+import "./globals.css"; // CSS 연결 확인
+
 export const metadata = {
-  title: 'HBC School SIS',
-  description: 'Student Information System for Myanmar Schools',
-  manifest: '/manifest.json', // PWA를 위한 설정
+  title: 'MCS Student Information System',
+  description: 'Official Student Records Management for Myanmar Christianity School',
+  manifest: '/manifest.json',
 }
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <meta name="theme-color" content="#3730a3" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <meta name="theme-color" content="#1e3a8a" />
       </head>
-      <body style={{ margin: 0, padding: 0 }}>
+      <body className="antialiased">
         {children}
       </body>
     </html>
