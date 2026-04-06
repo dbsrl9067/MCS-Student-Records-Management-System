@@ -2,7 +2,7 @@
 import React from 'react';
 import { 
   Users, Calendar, FileText, BarChart3, 
-  Settings, Search, Bell, CloudOff, CheckCircle 
+  Settings, Search, Bell, CloudOff, CheckCircle,
   Globe
 } from 'lucide-react';
 
