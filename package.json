@@ -1,0 +1,19 @@
+{
+  "name": "myanmar-school-sis",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "lucide-react": "latest",
+    "recharts": "latest",
+    "next-pwa": "latest",
+    "pandas": "latest",
+    "jspdf": "latest"
+  }
+}
