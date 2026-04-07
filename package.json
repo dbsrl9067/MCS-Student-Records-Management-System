@@ -12,7 +12,8 @@
     "react-dom": "latest",
     "lucide-react": "latest",
     "recharts": "latest",
-    "jspdf": "latest"
+    "jspdf": "latest",
+    "@supabase/supabase-js": "latest"
   },
   "devDependencies": {
     "tailwindcss": "latest",

@@ -1,19 +1,156 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, Calendar, FileText, BarChart3, 
   Settings, Search, Bell, CheckCircle, Globe,
   ChevronRight, Download, Plus, Filter, Eye,
-  Menu, X
+  Menu, X, Edit2, Trash2, Save, AlertCircle
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function MyanmarSIS() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    attendanceRate: 0,
+    baptizedStudents: 0,
+    ethnicGroups: new Set()
+  });
+  const [formData, setFormData] = useState({
+    student_id: '',
+    first_name: '',
+    last_name: '',
+    grade: 1,
+    gender: 'Male',
+    ethnicity: '',
+    is_baptized: false,
+    attendance_rate: 85
+  });
+
+  // Fetch students from Supabase
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const { data, error: fetchError } = await supabase
+        .from('students')
+        .select('*')
+        .order('student_id', { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      setStudents(data || []);
+      calculateStats(data || []);
+    } catch (err) {
+      console.error('Error fetching students:', err);
+      setError(err.message || 'Failed to fetch student data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateStats = (studentList) => {
+    const totalStudents = studentList.length;
+    const baptizedStudents = studentList.filter(s => s.is_baptized).length;
+    const avgAttendance = studentList.length > 0 
+      ? (studentList.reduce((sum, s) => sum + (s.attendance_rate || 0), 0) / studentList.length).toFixed(0)
+      : 0;
+    const ethnicGroups = new Set(studentList.map(s => s.ethnicity).filter(Boolean));
+
+    setStats({
+      totalStudents,
+      attendanceRate: avgAttendance,
+      baptizedStudents,
+      ethnicGroups: ethnicGroups.size
+    });
+  };
+
+  const handleAddStudent = async (e) => {
+    e.preventDefault();
+    try {
+      const { data, error: insertError } = await supabase
+        .from('students')
+        .insert([formData])
+        .select();
+
+      if (insertError) throw insertError;
+
+      setStudents([...students, ...data]);
+      calculateStats([...students, ...data]);
+      setFormData({
+        student_id: '',
+        first_name: '',
+        last_name: '',
+        grade: 1,
+        gender: 'Male',
+        ethnicity: '',
+        is_baptized: false,
+        attendance_rate: 85
+      });
+      setShowAddForm(false);
+    } catch (err) {
+      console.error('Error adding student:', err);
+      setError(err.message || 'Failed to add student');
+    }
+  };
+
+  const handleUpdateStudent = async (id) => {
+    try {
+      const studentToUpdate = students.find(s => s.id === id);
+      const { error: updateError } = await supabase
+        .from('students')
+        .update(studentToUpdate)
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      setEditingId(null);
+      fetchStudents();
+    } catch (err) {
+      console.error('Error updating student:', err);
+      setError(err.message || 'Failed to update student');
+    }
+  };
+
+  const handleDeleteStudent = async (id) => {
+    if (!confirm('Are you sure you want to delete this student?')) return;
+
+    try {
+      const { error: deleteError } = await supabase
+        .from('students')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) throw deleteError;
+
+      setStudents(students.filter(s => s.id !== id));
+      calculateStats(students.filter(s => s.id !== id));
+    } catch (err) {
+      console.error('Error deleting student:', err);
+      setError(err.message || 'Failed to delete student');
+    }
+  };
+
+  const handleStudentChange = (id, field, value) => {
+    setStudents(students.map(s => 
+      s.id === id ? { ...s, [field]: value } : s
+    ));
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* 상단 네비게이션 - CBNU 스타일 */}
+      {/* 상단 네비게이션 */}
       <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
         {/* 상단 바 */}
         <div className="bg-gray-900 text-white text-xs py-2 px-4 flex justify-between items-center">
@@ -40,7 +177,6 @@ export default function MyanmarSIS() {
               </div>
             </div>
 
-            {/* 모바일 메뉴 토글 */}
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
@@ -48,7 +184,6 @@ export default function MyanmarSIS() {
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
 
-            {/* 우측 아이콘 */}
             <div className="hidden md:flex items-center gap-4">
               <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg">
                 <Search size={18} className="text-gray-500"/>
@@ -68,7 +203,6 @@ export default function MyanmarSIS() {
             </div>
           </div>
 
-          {/* 메인 네비게이션 메뉴 */}
           <nav className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row gap-1 md:gap-0 border-t md:border-t-0 pt-4 md:pt-0 md:border-t-2 md:border-blue-600`}>
             <NavMenuItem label="Overview" icon={<BarChart3 size={16}/>} />
             <NavMenuItem label="Student Records" icon={<Users size={16}/>} />
@@ -88,41 +222,49 @@ export default function MyanmarSIS() {
         </div>
       </section>
 
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mx-4 md:mx-8 mt-4 flex items-center gap-2">
+          <AlertCircle size={20} />
+          <span>{error}</span>
+        </div>
+      )}
+
       {/* 메인 컨텐츠 */}
       <main className="flex-1 px-4 md:px-8 py-8 max-w-7xl mx-auto w-full">
         {/* 통계 카드 섹션 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard 
             title="Total Students" 
-            value="310" 
+            value={stats.totalStudents} 
             icon={<Users size={28}/>}
             color="blue"
-            trend="+4 this month"
+            trend={`${stats.totalStudents} enrolled`}
           />
           <StatCard 
             title="Attendance Rate" 
-            value="94%" 
+            value={`${stats.attendanceRate}%`} 
             icon={<Calendar size={28}/>}
             color="green"
-            trend="Stable"
+            trend="Average"
           />
           <StatCard 
             title="Baptized Students" 
-            value="215" 
+            value={stats.baptizedStudents} 
             icon={<CheckCircle size={28}/>}
             color="purple"
-            trend="69% of total"
+            trend={`${stats.totalStudents > 0 ? Math.round((stats.baptizedStudents / stats.totalStudents) * 100) : 0}% of total`}
           />
           <StatCard 
             title="Ethnic Groups" 
-            value="12" 
+            value={stats.ethnicGroups} 
             icon={<Globe size={28}/>}
             color="orange"
             trend="Diversity"
           />
         </div>
 
-        {/* 퀵 메뉴 섹션 - CBNU 스타일 */}
+        {/* 퀵 메뉴 섹션 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <QuickMenuCard 
             title="Student Services"
@@ -162,82 +304,208 @@ export default function MyanmarSIS() {
           />
         </div>
 
-        {/* 메인 테이블 섹션 */}
+        {/* 학생 목록 섹션 */}
         <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden mb-8">
-          {/* 테이블 헤더 */}
+          {/* 헤더 */}
           <div className="p-6 border-b border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-50">
             <div>
-              <h3 className="font-bold text-lg text-gray-900">Recent Student Updates</h3>
-              <p className="text-sm text-gray-600 mt-1">Latest changes to student information</p>
+              <h3 className="font-bold text-lg text-gray-900">Student Records</h3>
+              <p className="text-sm text-gray-600 mt-1">{students.length} students in the system</p>
             </div>
             <div className="flex gap-2 w-full md:w-auto">
               <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition flex-1 md:flex-none justify-center">
                 <Filter size={16}/>
                 Filter
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition flex-1 md:flex-none justify-center">
+              <button 
+                onClick={() => setShowAddForm(!showAddForm)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition flex-1 md:flex-none justify-center"
+              >
                 <Plus size={16}/>
                 Add Student
               </button>
             </div>
           </div>
 
-          {/* 테이블 바디 - 빈 상태 */}
-          <div className="p-12 text-center">
-            <div className="mb-4 flex justify-center">
-              <div className="p-4 bg-gray-100 rounded-full">
-                <Search size={40} className="text-gray-400"/>
-              </div>
+          {/* 추가 폼 */}
+          {showAddForm && (
+            <div className="p-6 border-b border-gray-200 bg-blue-50">
+              <h4 className="font-bold text-gray-900 mb-4">Add New Student</h4>
+              <form onSubmit={handleAddStudent} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input
+                  type="text"
+                  placeholder="Student ID"
+                  value={formData.student_id}
+                  onChange={(e) => setFormData({...formData, student_id: e.target.value})}
+                  required
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <input
+                  type="text"
+                  placeholder="First Name"
+                  value={formData.first_name}
+                  onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+                  required
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <input
+                  type="text"
+                  placeholder="Last Name"
+                  value={formData.last_name}
+                  onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                  required
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <select
+                  value={formData.grade}
+                  onChange={(e) => setFormData({...formData, grade: parseInt(e.target.value)})}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  <option value={1}>Grade 1</option>
+                  <option value={2}>Grade 2</option>
+                  <option value={3}>Grade 3</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Ethnicity"
+                  value={formData.ethnicity}
+                  onChange={(e) => setFormData({...formData, ethnicity: e.target.value})}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <input
+                  type="number"
+                  placeholder="Attendance Rate (%)"
+                  value={formData.attendance_rate}
+                  onChange={(e) => setFormData({...formData, attendance_rate: parseFloat(e.target.value)})}
+                  min="0"
+                  max="100"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_baptized}
+                    onChange={(e) => setFormData({...formData, is_baptized: e.target.checked})}
+                    className="w-4 h-4"
+                  />
+                  Baptized
+                </label>
+                <button
+                  type="submit"
+                  className="md:col-span-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
+                >
+                  Save Student
+                </button>
+              </form>
             </div>
-            <p className="text-gray-700 font-medium mb-2">No data available</p>
-            <p className="text-gray-600 text-sm mb-6">Import Excel file to populate the student database</p>
-            <button className="inline-flex items-center gap-2 px-6 py-3 bg-blue-50 text-blue-600 rounded-lg font-medium hover:bg-blue-100 transition border border-blue-200">
-              <Download size={18}/>
-              Import Excel File
-            </button>
-          </div>
+          )}
+
+          {/* 테이블 바디 */}
+          {loading ? (
+            <div className="p-12 text-center text-gray-500">
+              <p>Loading student data...</p>
+            </div>
+          ) : students.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="mb-4 flex justify-center">
+                <div className="p-4 bg-gray-100 rounded-full">
+                  <Search size={40} className="text-gray-400"/>
+                </div>
+              </div>
+              <p className="text-gray-700 font-medium mb-2">No students found</p>
+              <p className="text-gray-600 text-sm mb-6">Add your first student to get started</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Student ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Grade</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Ethnicity</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Attendance</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Baptized</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {students.map((student) => (
+                    <tr key={student.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm text-gray-900">{student.student_id}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900">{student.first_name} {student.last_name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900">Grade {student.grade}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{student.ethnicity || '-'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900">{student.attendance_rate}%</td>
+                      <td className="px-6 py-4 text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${student.is_baptized ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                          {student.is_baptized ? 'Yes' : 'No'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm flex gap-2">
+                        <button
+                          onClick={() => setEditingId(editingId === student.id ? null : student.id)}
+                          className="p-2 hover:bg-blue-100 text-blue-600 rounded-lg transition"
+                          title="Edit"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStudent(student.id)}
+                          className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition"
+                          title="Delete"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* 추가 정보 섹션 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 최근 활동 */}
-          <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-            <h3 className="font-bold text-lg text-gray-900 mb-4 pb-4 border-b border-gray-200">Recent Activities</h3>
-            <div className="space-y-4">
-              <ActivityItem 
-                title="Student Information Updated" 
-                description="John Smith's contact information changed"
-                time="2 hours ago"
-              />
-              <ActivityItem 
-                title="Attendance Record Submitted" 
-                description="April 5, 2024 attendance data entered"
-                time="1 day ago"
-              />
-              <ActivityItem 
-                title="Grades Entered" 
-                description="Midterm exam grades for Spring semester"
-                time="3 days ago"
-              />
-              <ActivityItem 
-                title="Certificate Issued" 
-                description="Graduation certificate issued to 15 students"
-                time="1 week ago"
-              />
-            </div>
-          </div>
-
-          {/* 학년별 현황 */}
+          {/* 학년별 분포 */}
           <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
             <h3 className="font-bold text-lg text-gray-900 mb-4 pb-4 border-b border-gray-200">Student Distribution by Grade</h3>
             <div className="space-y-5">
-              <GradeBar label="Grade 1" count={85} total={310} />
-              <GradeBar label="Grade 2" count={110} total={310} />
-              <GradeBar label="Grade 3" count={115} total={310} />
+              {[1, 2, 3].map(grade => {
+                const gradeStudents = students.filter(s => s.grade === grade).length;
+                return (
+                  <GradeBar 
+                    key={grade}
+                    label={`Grade ${grade}`} 
+                    count={gradeStudents} 
+                    total={stats.totalStudents} 
+                  />
+                );
+              })}
             </div>
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-900">
-                <span className="font-bold">Total Students:</span> 310
+          </div>
+
+          {/* 세례 현황 */}
+          <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+            <h3 className="font-bold text-lg text-gray-900 mb-4 pb-4 border-b border-gray-200">Baptism Status</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-700">Baptized Students</span>
+                <span className="text-2xl font-bold text-green-600">{stats.baptizedStudents}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-700">Not Baptized</span>
+                <span className="text-2xl font-bold text-gray-600">{stats.totalStudents - stats.baptizedStudents}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 mt-4">
+                <div 
+                  className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full"
+                  style={{ width: `${stats.totalStudents > 0 ? (stats.baptizedStudents / stats.totalStudents) * 100 : 0}%` }}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-600 text-center mt-2">
+                {stats.totalStudents > 0 ? Math.round((stats.baptizedStudents / stats.totalStudents) * 100) : 0}% baptized
               </p>
             </div>
           </div>
@@ -250,7 +518,7 @@ export default function MyanmarSIS() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-6">
             <div>
               <h4 className="text-white font-bold mb-3">About</h4>
-              <p className="text-xs leading-relaxed">Myanmar Christianity School Student Information System - Official records management platform</p>
+              <p className="text-xs leading-relaxed">Myanmar Christianity School Student Information System - Official records management platform powered by Supabase</p>
             </div>
             <div>
               <h4 className="text-white font-bold mb-3">Quick Links</h4>
@@ -348,21 +616,8 @@ function QuickMenuCard({ title, items, color }) {
   );
 }
 
-function ActivityItem({ title, description, time }) {
-  return (
-    <div className="flex gap-3 pb-4 border-b border-gray-100 last:border-b-0 last:pb-0">
-      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-900 text-sm">{title}</p>
-        <p className="text-gray-600 text-xs mt-0.5">{description}</p>
-        <p className="text-gray-500 text-xs mt-1">{time}</p>
-      </div>
-    </div>
-  );
-}
-
 function GradeBar({ label, count, total }) {
-  const percentage = (count / total) * 100;
+  const percentage = total > 0 ? (count / total) * 100 : 0;
   
   return (
     <div>
