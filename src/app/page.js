@@ -7,7 +7,7 @@ import {
   ChevronRight, Download, Plus, Filter, Eye,
   Menu, X, Edit2, Trash2, Save, AlertCircle
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../lib/supabase';
 
 export default function MyanmarSIS() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
