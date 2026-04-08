@@ -1,15 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Users, Calendar, CheckCircle, Globe, Plus, Trash2, Edit2, Search, Menu, X, Briefcase } from 'lucide-react';
+import { Users, Calendar, CheckCircle, Globe, Plus, Trash2, Edit2, Search, Menu, X, Briefcase, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function MyanmarSIS() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('students'); // 'students' or 'staff'
-  const [activeSection, setActiveSection] = useState('records'); // 'home', 'records', 'staff', etc.
+  const [activeSection, setActiveSection] = useState('records');
+  const [staffFilter, setStaffFilter] = useState('all'); // 'all', 'faculty', 'staff'
   
-  // Student states
+  // Data states
   const [students, setStudents] = useState([]);
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,11 +17,12 @@ export default function MyanmarSIS() {
   const [showAddForm, setShowAddForm] = useState(false);
   
   // Filter states
-  const [ageFilter, setAgeFilter] = useState('all'); // 'all', 'kindergarten', 'elementary', 'middle', 'high', 'staff'
+  const [ageFilter, setAgeFilter] = useState('all');
   
   // Stats
   const [stats, setStats] = useState({
     totalStudents: 0,
+    totalFaculty: 0,
     totalStaff: 0,
     attendanceRate: 0,
     baptizedStudents: 0,
@@ -48,10 +49,15 @@ export default function MyanmarSIS() {
     staff_id: '',
     first_name: '',
     last_name: '',
+    is_faculty: true, // true: 교원, false: 직원
     role: 'Teacher',
     department: '',
+    subjects: '', // 교원용
+    classes: '', // 교원용
+    job_title: '', // 직원용
     contact_email: '',
-    contact_phone: ''
+    contact_phone: '',
+    photo_url: ''
   });
 
   useEffect(() => {
@@ -89,13 +95,13 @@ export default function MyanmarSIS() {
 
   const calculateStats = (studentList, staffList) => {
     const totalStudents = studentList.length;
-    const totalStaff = staffList.length;
+    const totalFaculty = staffList.filter(s => s.is_faculty).length;
+    const totalStaffCount = staffList.filter(s => !s.is_faculty).length;
     const baptizedStudents = studentList.filter(s => s.is_baptized).length;
     const avgAttendance = studentList.length > 0 
       ? (studentList.reduce((sum, s) => sum + (s.attendance_rate || 0), 0) / studentList.length).toFixed(0)
       : 0;
 
-    // Age-based categorization
     const kindergarten = studentList.filter(s => s.age && s.age >= 3 && s.age <= 5).length;
     const elementary = studentList.filter(s => s.age && s.age >= 6 && s.age <= 11).length;
     const middle = studentList.filter(s => s.age && s.age >= 12 && s.age <= 14).length;
@@ -103,7 +109,8 @@ export default function MyanmarSIS() {
 
     setStats({
       totalStudents,
-      totalStaff,
+      totalFaculty,
+      totalStaff: totalStaffCount,
       attendanceRate: avgAttendance,
       baptizedStudents,
       kindergarten,
@@ -159,10 +166,15 @@ export default function MyanmarSIS() {
         staff_id: '',
         first_name: '',
         last_name: '',
+        is_faculty: true,
         role: 'Teacher',
         department: '',
+        subjects: '',
+        classes: '',
+        job_title: '',
         contact_email: '',
-        contact_phone: ''
+        contact_phone: '',
+        photo_url: ''
       });
       setShowAddForm(false);
     } catch (err) {
@@ -229,9 +241,16 @@ export default function MyanmarSIS() {
     return students;
   };
 
+  const getFilteredStaff = () => {
+    if (staffFilter === 'all') return staff;
+    if (staffFilter === 'faculty') return staff.filter(s => s.is_faculty);
+    if (staffFilter === 'staff') return staff.filter(s => !s.is_faculty);
+    return staff;
+  };
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', fontFamily: 'Arial, sans-serif' }}>
-      {/* HEADER - Logo and Title */}
+      {/* HEADER */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #ddd', padding: '20px 0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -255,24 +274,10 @@ export default function MyanmarSIS() {
               <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#666' }}>With Truth and Loyalty</p>
             </div>
           </div>
-          <button 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            style={{
-              display: 'none',
-              background: 'none',
-              border: 'none',
-              color: '#003366',
-              cursor: 'pointer',
-              fontSize: '24px'
-            }}
-            className="mobile-menu-btn"
-          >
-            {mobileMenuOpen ? '✕' : '☰'}
-          </button>
         </div>
       </div>
 
-      {/* NAVIGATION BAR - Functional */}
+      {/* NAVIGATION BAR */}
       <div style={{
         backgroundColor: '#003366',
         borderBottom: '3px solid #FFD700',
@@ -283,17 +288,13 @@ export default function MyanmarSIS() {
             {[
               { label: 'HOME', section: 'home' },
               { label: 'STUDENT RECORDS', section: 'records' },
+              { label: 'FACULTY', section: 'faculty' },
               { label: 'STAFF', section: 'staff' },
-              { label: 'ABOUT', section: 'about' },
-              { label: 'RESEARCH', section: 'research' }
+              { label: 'ABOUT', section: 'about' }
             ].map((item) => (
               <button
                 key={item.section}
-                onClick={() => {
-                  setActiveSection(item.section);
-                  if (item.section === 'records') setActiveTab('students');
-                  if (item.section === 'staff') setActiveTab('staff');
-                }}
+                onClick={() => setActiveSection(item.section)}
                 style={{
                   color: activeSection === item.section ? '#FFD700' : 'white',
                   textDecoration: 'none',
@@ -333,24 +334,18 @@ export default function MyanmarSIS() {
         {/* HOME SECTION */}
         {activeSection === 'home' && (
           <>
-            {/* HERO SECTION */}
             <div style={{
               backgroundColor: '#003366',
               color: 'white',
               padding: '60px 40px',
               borderRadius: '4px',
               marginBottom: '40px',
-              backgroundImage: 'linear-gradient(135deg, #003366 0%, #0055A4 100%)',
-              position: 'relative',
-              overflow: 'hidden'
+              backgroundImage: 'linear-gradient(135deg, #003366 0%, #0055A4 100%)'
             }}>
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <h2 style={{ fontSize: '36px', margin: '0 0 10px 0', fontWeight: 'bold' }}>Student Information System</h2>
-                <p style={{ fontSize: '16px', margin: '0', color: '#e0e0e0' }}>Myanmar Christianity School - Official Student & Staff Records Management</p>
-              </div>
+              <h2 style={{ fontSize: '36px', margin: '0 0 10px 0', fontWeight: 'bold' }}>Student Information System</h2>
+              <p style={{ fontSize: '16px', margin: '0', color: '#e0e0e0' }}>Myanmar Christianity School - Official Student & Staff Records Management</p>
             </div>
 
-            {/* STATS CARDS */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
@@ -358,12 +353,11 @@ export default function MyanmarSIS() {
               marginBottom: '40px'
             }}>
               <StatCard title="Total Students" value={stats.totalStudents} icon="👥" />
-              <StatCard title="Total Staff" value={stats.totalStaff} icon="👔" />
+              <StatCard title="Faculty Members" value={stats.totalFaculty} icon="👨‍🏫" />
+              <StatCard title="Staff Members" value={stats.totalStaff} icon="👔" />
               <StatCard title="Avg Attendance" value={`${stats.attendanceRate}%`} icon="📊" />
-              <StatCard title="Baptized" value={stats.baptizedStudents} icon="✓" />
             </div>
 
-            {/* AGE DISTRIBUTION */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -380,7 +374,6 @@ export default function MyanmarSIS() {
         {/* STUDENT RECORDS SECTION */}
         {activeSection === 'records' && (
           <>
-            {/* AGE FILTER */}
             <div style={{
               backgroundColor: '#e8f4f8',
               border: '2px solid #003366',
@@ -418,8 +411,7 @@ export default function MyanmarSIS() {
               </div>
             </div>
 
-            {/* ADD STUDENT FORM */}
-            {showAddForm && activeTab === 'students' && (
+            {showAddForm && activeSection === 'records' && (
               <div style={{
                 backgroundColor: '#e8f4f8',
                 border: '2px solid #003366',
@@ -462,15 +454,6 @@ export default function MyanmarSIS() {
                     max="100"
                     style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
                   />
-                  <select
-                    value={formData.grade}
-                    onChange={(e) => setFormData({...formData, grade: parseInt(e.target.value)})}
-                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
-                  >
-                    <option value={1}>Grade 1</option>
-                    <option value={2}>Grade 2</option>
-                    <option value={3}>Grade 3</option>
-                  </select>
                   <input
                     type="text"
                     placeholder="Ethnicity"
@@ -515,14 +498,12 @@ export default function MyanmarSIS() {
               </div>
             )}
 
-            {/* STUDENT RECORDS TABLE */}
             <div style={{
               backgroundColor: 'white',
               borderRadius: '4px',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
               overflow: 'hidden'
             }}>
-              {/* Table Header */}
               <div style={{
                 backgroundColor: '#003366',
                 color: 'white',
@@ -552,7 +533,6 @@ export default function MyanmarSIS() {
                 </button>
               </div>
 
-              {/* Table Body */}
               {loading ? (
                 <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Loading...</div>
               ) : getFilteredStudents().length === 0 ? (
@@ -633,10 +613,161 @@ export default function MyanmarSIS() {
           </>
         )}
 
+        {/* FACULTY SECTION */}
+        {activeSection === 'faculty' && (
+          <>
+            {showAddForm && (
+              <div style={{
+                backgroundColor: '#e8f4f8',
+                border: '2px solid #003366',
+                padding: '20px',
+                borderRadius: '4px',
+                marginBottom: '30px'
+              }}>
+                <h3 style={{ margin: '0 0 15px 0', color: '#003366' }}>Add New Faculty Member</h3>
+                <form onSubmit={handleAddStaff} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                  <input
+                    type="text"
+                    placeholder="Staff ID"
+                    value={staffFormData.staff_id}
+                    onChange={(e) => setStaffFormData({...staffFormData, staff_id: e.target.value})}
+                    required
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="First Name"
+                    value={staffFormData.first_name}
+                    onChange={(e) => setStaffFormData({...staffFormData, first_name: e.target.value})}
+                    required
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Last Name"
+                    value={staffFormData.last_name}
+                    onChange={(e) => setStaffFormData({...staffFormData, last_name: e.target.value})}
+                    required
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Subjects (e.g., Math, Science)"
+                    value={staffFormData.subjects}
+                    onChange={(e) => setStaffFormData({...staffFormData, subjects: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Classes (e.g., Grade 10-A, 11-B)"
+                    value={staffFormData.classes}
+                    onChange={(e) => setStaffFormData({...staffFormData, classes: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Department"
+                    value={staffFormData.department}
+                    onChange={(e) => setStaffFormData({...staffFormData, department: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={staffFormData.contact_email}
+                    onChange={(e) => setStaffFormData({...staffFormData, contact_email: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Phone"
+                    value={staffFormData.contact_phone}
+                    onChange={(e) => setStaffFormData({...staffFormData, contact_phone: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Photo URL (paste image link)"
+                    value={staffFormData.photo_url}
+                    onChange={(e) => setStaffFormData({...staffFormData, photo_url: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <button
+                    type="submit"
+                    style={{
+                      gridColumn: 'span 2',
+                      padding: '12px 20px',
+                      backgroundColor: '#FFD700',
+                      color: '#003366',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Save Faculty Member
+                  </button>
+                </form>
+              </div>
+            )}
+
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '4px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              overflow: 'hidden',
+              marginBottom: '30px'
+            }}>
+              <div style={{
+                backgroundColor: '#003366',
+                color: 'white',
+                padding: '20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <h3 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>Faculty Directory</h3>
+                  <p style={{ margin: '0', fontSize: '12px', color: '#ccc' }}>{staff.filter(s => s.is_faculty).length} faculty members</p>
+                </div>
+                <button
+                  onClick={() => setShowAddForm(!showAddForm)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#FFD700',
+                    color: '#003366',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  + Add Faculty
+                </button>
+              </div>
+
+              {loading ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Loading...</div>
+              ) : staff.filter(s => s.is_faculty).length === 0 ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+                  <p>No faculty members found.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', padding: '20px' }}>
+                  {staff.filter(s => s.is_faculty).map((member) => (
+                    <FacultyCard key={member.id} member={member} onDelete={() => handleDeleteStaff(member.id)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
         {/* STAFF SECTION */}
         {activeSection === 'staff' && (
           <>
-            {/* ADD STAFF FORM */}
             {showAddForm && (
               <div style={{
                 backgroundColor: '#e8f4f8',
@@ -671,16 +802,13 @@ export default function MyanmarSIS() {
                     required
                     style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
                   />
-                  <select
-                    value={staffFormData.role}
-                    onChange={(e) => setStaffFormData({...staffFormData, role: e.target.value})}
+                  <input
+                    type="text"
+                    placeholder="Job Title (e.g., Accountant, Janitor)"
+                    value={staffFormData.job_title}
+                    onChange={(e) => setStaffFormData({...staffFormData, job_title: e.target.value})}
                     style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
-                  >
-                    <option value="Teacher">Teacher</option>
-                    <option value="Principal">Principal</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Support">Support Staff</option>
-                  </select>
+                  />
                   <input
                     type="text"
                     placeholder="Department"
@@ -722,14 +850,12 @@ export default function MyanmarSIS() {
               </div>
             )}
 
-            {/* STAFF TABLE */}
             <div style={{
               backgroundColor: 'white',
               borderRadius: '4px',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
               overflow: 'hidden'
             }}>
-              {/* Table Header */}
               <div style={{
                 backgroundColor: '#003366',
                 color: 'white',
@@ -740,7 +866,7 @@ export default function MyanmarSIS() {
               }}>
                 <div>
                   <h3 style={{ margin: '0 0 5px 0', fontSize: '18px' }}>Staff Directory</h3>
-                  <p style={{ margin: '0', fontSize: '12px', color: '#ccc' }}>{staff.length} staff members</p>
+                  <p style={{ margin: '0', fontSize: '12px', color: '#ccc' }}>{staff.filter(s => !s.is_faculty).length} staff members</p>
                 </div>
                 <button
                   onClick={() => setShowAddForm(!showAddForm)}
@@ -759,10 +885,9 @@ export default function MyanmarSIS() {
                 </button>
               </div>
 
-              {/* Table Body */}
               {loading ? (
                 <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Loading...</div>
-              ) : staff.length === 0 ? (
+              ) : staff.filter(s => !s.is_faculty).length === 0 ? (
                 <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
                   <p>No staff members found.</p>
                 </div>
@@ -772,36 +897,23 @@ export default function MyanmarSIS() {
                     <tr style={{ backgroundColor: '#f5f5f5', borderBottom: '2px solid #003366' }}>
                       <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', color: '#003366', fontSize: '12px' }}>Staff ID</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', color: '#003366', fontSize: '12px' }}>Name</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', color: '#003366', fontSize: '12px' }}>Role</th>
+                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', color: '#003366', fontSize: '12px' }}>Job Title</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', color: '#003366', fontSize: '12px' }}>Department</th>
                       <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', color: '#003366', fontSize: '12px' }}>Email</th>
-                      <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold', color: '#003366', fontSize: '12px' }}>Phone</th>
                       <th style={{ padding: '12px', textAlign: 'center', fontWeight: 'bold', color: '#003366', fontSize: '12px' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {staff.map((member, idx) => (
+                    {staff.filter(s => !s.is_faculty).map((member, idx) => (
                       <tr key={member.id} style={{
                         borderBottom: '1px solid #eee',
                         backgroundColor: idx % 2 === 0 ? 'white' : '#f9f9f9'
                       }}>
                         <td style={{ padding: '12px', fontSize: '14px', fontWeight: 'bold', color: '#003366' }}>{member.staff_id}</td>
                         <td style={{ padding: '12px', fontSize: '14px' }}>{member.first_name} {member.last_name}</td>
-                        <td style={{ padding: '12px', fontSize: '14px' }}>
-                          <span style={{
-                            padding: '4px 8px',
-                            borderRadius: '3px',
-                            backgroundColor: '#e3f2fd',
-                            color: '#003366',
-                            fontSize: '12px',
-                            fontWeight: 'bold'
-                          }}>
-                            {member.role}
-                          </span>
-                        </td>
+                        <td style={{ padding: '12px', fontSize: '14px' }}>{member.job_title || '-'}</td>
                         <td style={{ padding: '12px', fontSize: '14px', color: '#666' }}>{member.department || '-'}</td>
                         <td style={{ padding: '12px', fontSize: '12px', color: '#666' }}>{member.contact_email || '-'}</td>
-                        <td style={{ padding: '12px', fontSize: '12px', color: '#666' }}>{member.contact_phone || '-'}</td>
                         <td style={{ padding: '12px', textAlign: 'center' }}>
                           <button
                             onClick={() => handleDeleteStaff(member.id)}
@@ -840,7 +952,7 @@ export default function MyanmarSIS() {
               Myanmar Christianity School (MCS Academy) is a comprehensive educational institution serving students from kindergarten through high school. Our mission is to provide quality education rooted in Christian values and truth.
             </p>
             <p style={{ lineHeight: '1.6', color: '#666' }}>
-              This Student Information System helps us manage and track student records, attendance, and staff information efficiently. With Truth and Loyalty.
+              This Student Information System helps us manage and track student records, faculty information, and staff records efficiently. With Truth and Loyalty.
             </p>
           </div>
         )}
@@ -860,14 +972,6 @@ export default function MyanmarSIS() {
           <p style={{ marginTop: '10px', color: '#ccc' }}>Student Information System | With Truth and Loyalty</p>
         </div>
       </footer>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .mobile-menu-btn {
-            display: block !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
@@ -880,24 +984,11 @@ function StatCard({ title, value, icon }) {
       padding: '30px',
       borderRadius: '4px',
       textAlign: 'center',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      position: 'relative',
-      overflow: 'hidden'
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
     }}>
-      <div style={{
-        position: 'absolute',
-        top: '-20px',
-        right: '-20px',
-        fontSize: '80px',
-        opacity: '0.1'
-      }}>
-        {icon}
-      </div>
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ fontSize: '32px', marginBottom: '10px' }}>{icon}</div>
-        <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '1px' }}>{title}</p>
-        <h3 style={{ margin: '0', fontSize: '36px', fontWeight: 'bold', color: '#FFD700' }}>{value}</h3>
-      </div>
+      <div style={{ fontSize: '32px', marginBottom: '10px' }}>{icon}</div>
+      <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#ccc', textTransform: 'uppercase', letterSpacing: '1px' }}>{title}</p>
+      <h3 style={{ margin: '0', fontSize: '36px', fontWeight: 'bold', color: '#FFD700' }}>{value}</h3>
     </div>
   );
 }
@@ -914,6 +1005,86 @@ function InfoBox({ title, value, color }) {
     }}>
       <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#666', textTransform: 'uppercase' }}>{title}</p>
       <h3 style={{ margin: '0', fontSize: '32px', fontWeight: 'bold', color }}>{value}</h3>
+    </div>
+  );
+}
+
+function FacultyCard({ member, onDelete }) {
+  return (
+    <div style={{
+      backgroundColor: 'white',
+      border: '2px solid #003366',
+      borderRadius: '8px',
+      overflow: 'hidden',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      transition: 'transform 0.3s',
+      cursor: 'pointer'
+    }}>
+      {/* Photo */}
+      <div style={{
+        width: '100%',
+        height: '200px',
+        backgroundColor: '#e0e0e0',
+        backgroundImage: member.photo_url ? `url(${member.photo_url})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '48px',
+        color: '#999'
+      }}>
+        {!member.photo_url && '📷'}
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: '20px' }}>
+        <h3 style={{ margin: '0 0 5px 0', color: '#003366', fontSize: '18px', fontWeight: 'bold' }}>
+          {member.first_name} {member.last_name}
+        </h3>
+        <p style={{ margin: '0 0 10px 0', color: '#FFD700', fontSize: '12px', fontWeight: 'bold' }}>
+          {member.role}
+        </p>
+
+        {member.subjects && (
+          <div style={{ marginBottom: '10px' }}>
+            <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px', fontWeight: 'bold' }}>Subjects:</p>
+            <p style={{ margin: '0', color: '#999', fontSize: '12px' }}>{member.subjects}</p>
+          </div>
+        )}
+
+        {member.classes && (
+          <div style={{ marginBottom: '10px' }}>
+            <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px', fontWeight: 'bold' }}>Classes:</p>
+            <p style={{ margin: '0', color: '#999', fontSize: '12px' }}>{member.classes}</p>
+          </div>
+        )}
+
+        {member.contact_email && (
+          <p style={{ margin: '10px 0 5px 0', color: '#999', fontSize: '11px' }}>✉️ {member.contact_email}</p>
+        )}
+
+        {member.contact_phone && (
+          <p style={{ margin: '0 0 15px 0', color: '#999', fontSize: '11px' }}>📞 {member.contact_phone}</p>
+        )}
+
+        <button
+          onClick={onDelete}
+          style={{
+            width: '100%',
+            padding: '8px',
+            backgroundColor: '#ff6b6b',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontWeight: 'bold'
+          }}
+        >
+          Delete
+        </button>
+      </div>
     </div>
   );
 }
