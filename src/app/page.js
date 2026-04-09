@@ -1116,7 +1116,7 @@ export default function MyanmarSIS() {
         fontSize: '12px'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <p>&copy; 2024 Myanmar Christianity School. All rights reserved.</p>
+          <p>&copy; 2026 Myanmar Christianity School. All rights reserved.</p>
           <p style={{ marginTop: '10px', color: '#ccc' }}>Student Information System | With Truth and Loyalty</p>
         </div>
       </footer>
