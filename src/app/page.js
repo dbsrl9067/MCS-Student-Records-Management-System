@@ -1,13 +1,20 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Users, Calendar, CheckCircle, Globe, Plus, Trash2, Edit2, Search, Menu, X, Briefcase, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export default function MyanmarSIS() {
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('records');
   const [staffFilter, setStaffFilter] = useState('all'); // 'all', 'faculty', 'staff'
+  
+  // Authentication states
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
   // Data states
   const [students, setStudents] = useState([]);
@@ -60,9 +67,32 @@ export default function MyanmarSIS() {
     photo_url: ''
   });
 
+  // Check authentication on mount
   useEffect(() => {
-    fetchData();
-  }, []);
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          router.push('/login');
+        } else {
+          setUser(session.user);
+        }
+      } catch (err) {
+        console.error('Auth check error:', err);
+        router.push('/login');
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+    checkAuth();
+  }, [router]);
+
+  // Fetch data when user is authenticated
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
 
   const fetchData = async () => {
     try {
@@ -248,6 +278,41 @@ export default function MyanmarSIS() {
     return staff;
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      router.push('/login');
+    } catch (err) {
+      console.error('Logout error:', err);
+      setError('Failed to logout. Please try again.');
+    }
+  };
+
+  // Show loading screen while checking authentication
+  if (authLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f5f5f5',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>⏳</div>
+          <p style={{ color: '#666', fontSize: '16px' }}>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show nothing if not authenticated (will redirect to login)
+  if (!user) {
+    return null;
+  }
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5', fontFamily: 'Arial, sans-serif' }}>
       {/* HEADER */}
@@ -274,8 +339,91 @@ export default function MyanmarSIS() {
               <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#666' }}>With Truth and Loyalty</p>
             </div>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div style={{ fontSize: '12px', color: '#666', textAlign: 'right' }}>
+              <p style={{ margin: '0 0 3px 0', fontWeight: 'bold' }}>Admin:</p>
+              <p style={{ margin: '0', color: '#003366', fontSize: '11px' }}>{user?.email}</p>
+            </div>
+            <button
+              onClick={() => setShowLogoutConfirm(true)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#ff6b6b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                transition: 'background-color 0.3s'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#ff5252'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#ff6b6b'}
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div style={{
+          position: 'fixed',
+          top: '0',
+          left: '0',
+          right: '0',
+          bottom: '0',
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: '9999'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '30px',
+            maxWidth: '400px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.2)'
+          }}>
+            <h3 style={{ margin: '0 0 15px 0', color: '#003366', fontSize: '18px' }}>Confirm Logout</h3>
+            <p style={{ margin: '0 0 20px 0', color: '#666', fontSize: '14px' }}>Are you sure you want to logout?</p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#ddd',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#ff6b6b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* NAVIGATION BAR */}
       <div style={{
