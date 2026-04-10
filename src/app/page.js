@@ -650,6 +650,48 @@ export default function MyanmarSIS() {
                     max="100"
                     style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
                   />
+                  <input
+                    type="text"
+                    placeholder="Father's Name"
+                    value={formData.father_name || ''}
+                    onChange={(e) => setFormData({...formData, father_name: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Roll Number"
+                    value={formData.roll_no || ''}
+                    onChange={(e) => setFormData({...formData, roll_no: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Registration Number"
+                    value={formData.reg_no || ''}
+                    onChange={(e) => setFormData({...formData, reg_no: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="National Registration No (NRC)"
+                    value={formData.nrc_no || ''}
+                    onChange={(e) => setFormData({...formData, nrc_no: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Regional Centre"
+                    value={formData.regional_centre || ''}
+                    onChange={(e) => setFormData({...formData, regional_centre: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Specialization"
+                    value={formData.specialization || ''}
+                    onChange={(e) => setFormData({...formData, specialization: e.target.value})}
+                    style={{ padding: '10px', border: '1px solid #003366', borderRadius: '4px', fontSize: '14px' }}
+                  />
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
                     <input
                       type="checkbox"
@@ -1309,48 +1351,102 @@ export default function MyanmarSIS() {
                   ))}
                 </div>
                 
-                {certificateType && (
+{certificateType && (
                   <div style={{
-                    backgroundColor: '#f9f9f9',
-                    padding: '30px',
-                    borderRadius: '4px',
-                    border: '2px solid #FFD700',
-                    marginBottom: '20px'
+                    backgroundColor: 'white',
+                    padding: '40px',
+                    marginBottom: '20px',
+                    border: '3px solid #003366',
+                    borderRadius: '0px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    position: 'relative',
+                    background: 'linear-gradient(to right, rgba(0,51,102,0.02) 0%, transparent 50%, rgba(0,51,102,0.02) 100%)'
                   }}>
-                    <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                      <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#003366', marginBottom: '10px' }}>Myanmar Christianity School</div>
-                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '20px' }}>With Truth and Loyalty</div>
-                      <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#003366', marginBottom: '20px', textTransform: 'uppercase' }}>
-                        {certificateType === 'admission' && 'Admission Certificate'}
-                        {certificateType === 'enrollment' && 'Enrollment Certificate'}
-                        {certificateType === 'graduation' && 'Graduation Certificate'}
-                        {certificateType === 'transcript' && 'Academic Transcript'}
-                        {certificateType === 'tuition' && 'Tuition Payment Receipt'}
+                    <div style={{ position: 'relative', zIndex: '1' }}>
+                      {/* Header */}
+                      <div style={{ textAlign: 'center', marginBottom: '30px', paddingBottom: '20px', borderBottom: '2px solid #FFD700' }}>
+                        <div style={{ fontSize: '11px', color: '#003366', fontStyle: 'italic', marginBottom: '8px', fontWeight: 'bold' }}>OFFICIAL CERTIFICATE</div>
+                        <div style={{ fontSize: '26px', fontWeight: 'bold', color: '#003366', marginBottom: '5px' }}>Myanmar Christianity School</div>
+                        <div style={{ fontSize: '12px', color: '#666', marginBottom: '3px' }}>MCS Academy</div>
+                        <div style={{ fontSize: '11px', color: '#999', fontStyle: 'italic' }}>With Truth and Loyalty</div>
                       </div>
-                    </div>
-                    
-                    <div style={{ borderTop: '2px solid #003366', borderBottom: '2px solid #003366', padding: '20px', marginBottom: '20px', textAlign: 'center' }}>
-                      <p style={{ margin: '0 0 10px 0', color: '#666' }}>This is to certify that</p>
-                      <p style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: 'bold', color: '#003366' }}>
-                        {selectedStudentForCert.first_name} {selectedStudentForCert.last_name}
-                      </p>
-                      <p style={{ margin: '0', color: '#666', fontSize: '12px' }}>Student ID: {selectedStudentForCert.student_id}</p>
-                    </div>
-                    
-                    <div style={{ marginBottom: '20px', color: '#666', fontSize: '12px', lineHeight: '1.6' }}>
-                      {certificateType === 'admission' && <p>has been admitted to Myanmar Christianity School for the current academic year.</p>}
-                      {certificateType === 'enrollment' && <p>is currently enrolled as a student in good standing at Myanmar Christianity School.</p>}
-                      {certificateType === 'graduation' && <p>has successfully completed all requirements and is hereby certified as a graduate of Myanmar Christianity School.</p>}
-                      {certificateType === 'transcript' && <p>Academic performance records are maintained in our official records. This transcript certifies the student's academic standing.</p>}
-                      {certificateType === 'tuition' && <p>has fulfilled all tuition payment obligations for the current academic period.</p>}
-                    </div>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '40px', textAlign: 'center' }}>
-                      <div>
-                        <div style={{ borderTop: '1px solid #003366', paddingTop: '10px', fontSize: '11px', color: '#666' }}>Principal Signature</div>
+                      
+                      {/* Certificate Type */}
+                      <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#003366', textDecoration: 'underline', textDecorationThickness: '2px', textUnderlineOffset: '5px' }}>
+                          {certificateType === 'admission' && 'ADMISSION CERTIFICATE'}
+                          {certificateType === 'enrollment' && 'ENROLLMENT CERTIFICATE'}
+                          {certificateType === 'graduation' && 'GRADUATION CERTIFICATE'}
+                          {certificateType === 'transcript' && 'ACADEMIC TRANSCRIPT'}
+                          {certificateType === 'tuition' && 'TUITION PAYMENT RECEIPT'}
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ borderTop: '1px solid #003366', paddingTop: '10px', fontSize: '11px', color: '#666' }}>Date: {new Date().toLocaleDateString()}</div>
+                      
+                      {/* Main Content */}
+                      <div style={{ marginBottom: '25px', lineHeight: '1.8', color: '#333', fontSize: '13px' }}>
+                        <p style={{ margin: '0 0 15px 0', textAlign: 'center' }}>This is to certify that</p>
+                        <p style={{ margin: '0 0 15px 0', textAlign: 'center', fontSize: '15px', fontWeight: 'bold', color: '#003366' }}>
+                          {selectedStudentForCert.first_name} {selectedStudentForCert.last_name}
+                        </p>
+                        {selectedStudentForCert.father_name && (
+                          <p style={{ margin: '0 0 15px 0', textAlign: 'center', fontSize: '12px', color: '#666' }}>
+                            Son/Daughter of {selectedStudentForCert.father_name}
+                          </p>
+                        )}
+                        <div style={{ margin: '15px 0', textAlign: 'center', fontSize: '12px', color: '#666' }}>
+                          {selectedStudentForCert.roll_no && <p style={{ margin: '3px 0' }}>Roll No: {selectedStudentForCert.roll_no}</p>}
+                          {selectedStudentForCert.reg_no && <p style={{ margin: '3px 0' }}>Registered No: {selectedStudentForCert.reg_no}</p>}
+                          {selectedStudentForCert.nrc_no && <p style={{ margin: '3px 0' }}>National Registration No: {selectedStudentForCert.nrc_no}</p>}
+                          {selectedStudentForCert.regional_centre && <p style={{ margin: '3px 0' }}>Regional Centre: {selectedStudentForCert.regional_centre}</p>}
+                        </div>
+                      </div>
+                      
+                      {/* Certificate Statement */}
+                      <div style={{ marginBottom: '25px', padding: '15px', backgroundColor: '#f5f5f5', borderLeft: '4px solid #FFD700', fontSize: '12px', lineHeight: '1.6', color: '#333' }}>
+                        {certificateType === 'admission' && <p style={{ margin: '0' }}>has been admitted to Myanmar Christianity School for the current academic year with all required documentation and qualifications.</p>}
+                        {certificateType === 'enrollment' && <p style={{ margin: '0' }}>is currently enrolled as a student in good standing at Myanmar Christianity School and is pursuing studies in {selectedStudentForCert.specialization || 'General Studies'}.</p>}
+                        {certificateType === 'graduation' && <p style={{ margin: '0' }}>has successfully completed all academic requirements and is hereby certified as a graduate of Myanmar Christianity School with distinction in {selectedStudentForCert.specialization || 'General Studies'}.</p>}
+                        {certificateType === 'transcript' && <p style={{ margin: '0' }}>Academic performance records are maintained in our official records. This transcript certifies the student's academic standing and course completion status.</p>}
+                        {certificateType === 'tuition' && <p style={{ margin: '0' }}>has fulfilled all tuition payment obligations for the current academic period and is in good financial standing.</p>}
+                      </div>
+                      
+                      {/* Signature Section */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '40px', marginBottom: '20px', textAlign: 'center' }}>
+                        <div>
+                          <div style={{ height: '50px', marginBottom: '5px' }} />
+                          <div style={{ borderTop: '2px solid #003366', paddingTop: '8px', fontSize: '11px', fontWeight: 'bold', color: '#003366' }}>Principal Signature</div>
+                        </div>
+                        <div>
+                          <div style={{ height: '50px', marginBottom: '5px' }} />
+                          <div style={{ borderTop: '2px solid #003366', paddingTop: '8px', fontSize: '11px', fontWeight: 'bold', color: '#003366' }}>Date: {new Date().toLocaleDateString()}</div>
+                        </div>
+                      </div>
+                      
+                      {/* Official Seal Area */}
+                      <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '20px', borderTop: '1px dashed #ccc' }}>
+                        <div style={{ fontSize: '10px', color: '#999', fontStyle: 'italic', marginBottom: '8px' }}>[Official Seal/Stamp Area]</div>
+                        <div style={{
+                          width: '80px',
+                          height: '80px',
+                          margin: '0 auto',
+                          border: '3px solid #FFD700',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '24px',
+                          fontWeight: 'bold',
+                          color: '#FFD700',
+                          backgroundColor: 'rgba(255, 215, 0, 0.05)'
+                        }}>
+                          ✓
+                        </div>
+                      </div>
+                      
+                      {/* Footer */}
+                      <div style={{ textAlign: 'center', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #ddd', fontSize: '10px', color: '#999' }}>
+                        <p style={{ margin: '0' }}>Authenticated and Certified by Myanmar Christianity School</p>
+                        <p style={{ margin: '3px 0 0 0' }}>Certificate ID: {selectedStudentForCert.student_id}-{certificateType.toUpperCase()}-{new Date().getFullYear()}</p>
                       </div>
                     </div>
                   </div>
