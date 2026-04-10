@@ -26,6 +26,21 @@ export default function MyanmarSIS() {
   // Filter states
   const [ageFilter, setAgeFilter] = useState('all');
   
+  // Calendar states
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [showAddEventForm, setShowAddEventForm] = useState(false);
+  const [eventFormData, setEventFormData] = useState({
+    title: '',
+    description: '',
+    start_date: '',
+    end_date: '',
+    category: 'Academic'
+  });
+  
+  // Certificate states
+  const [selectedStudentForCert, setSelectedStudentForCert] = useState(null);
+  const [certificateType, setCertificateType] = useState(null);
+  
   // Stats
   const [stats, setStats] = useState({
     totalStudents: 0,
@@ -91,8 +106,23 @@ export default function MyanmarSIS() {
   useEffect(() => {
     if (user) {
       fetchData();
+      fetchCalendarEvents();
     }
   }, [user]);
+  
+  const fetchCalendarEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .order('start_date', { ascending: true });
+      
+      if (error) throw error;
+      setCalendarEvents(data || []);
+    } catch (err) {
+      console.error('Error fetching calendar events:', err);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -438,6 +468,8 @@ export default function MyanmarSIS() {
               { label: 'STUDENT RECORDS', section: 'records' },
               { label: 'FACULTY', section: 'faculty' },
               { label: 'STAFF', section: 'staff' },
+              { label: 'CALENDAR', section: 'calendar' },
+              { label: 'CERTIFICATES', section: 'certificates' },
               { label: 'ABOUT', section: 'about' }
             ].map((item) => (
               <button
@@ -1088,6 +1120,284 @@ export default function MyanmarSIS() {
         )}
 
         {/* ABOUT SECTION */}
+        {activeSection === 'calendar' && (
+          <div style={{
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '4px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h2 style={{ color: '#003366', margin: '0' }}>Academic Calendar</h2>
+              <button
+                onClick={() => setShowAddEventForm(!showAddEventForm)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#FFD700',
+                  color: '#003366',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '12px'
+                }}
+              >
+                {showAddEventForm ? 'Cancel' : '+ Add Event'}
+              </button>
+            </div>
+            
+            {showAddEventForm && (
+              <div style={{ backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '4px', marginBottom: '20px' }}>
+                <input
+                  type="text"
+                  placeholder="Event Title"
+                  value={eventFormData.title}
+                  onChange={(e) => setEventFormData({...eventFormData, title: e.target.value})}
+                  style={{ width: '100%', padding: '8px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
+                />
+                <textarea
+                  placeholder="Description"
+                  value={eventFormData.description}
+                  onChange={(e) => setEventFormData({...eventFormData, description: e.target.value})}
+                  style={{ width: '100%', padding: '8px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box', minHeight: '80px' }}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                  <input
+                    type="date"
+                    value={eventFormData.start_date}
+                    onChange={(e) => setEventFormData({...eventFormData, start_date: e.target.value})}
+                    style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                  />
+                  <input
+                    type="date"
+                    value={eventFormData.end_date}
+                    onChange={(e) => setEventFormData({...eventFormData, end_date: e.target.value})}
+                    style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                  />
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!eventFormData.title || !eventFormData.start_date) {
+                      alert('Please fill in required fields');
+                      return;
+                    }
+                    const { error } = await supabase.from('calendar_events').insert([eventFormData]);
+                    if (error) {
+                      alert('Error adding event: ' + error.message);
+                    } else {
+                      fetchCalendarEvents();
+                      setEventFormData({ title: '', description: '', start_date: '', end_date: '', category: 'Academic' });
+                      setShowAddEventForm(false);
+                    }
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#003366',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Save Event
+                </button>
+              </div>
+            )}
+            
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {calendarEvents.map((event) => (
+                <div key={event.id} style={{
+                  backgroundColor: '#f5f5f5',
+                  padding: '15px',
+                  borderLeft: '4px solid #FFD700',
+                  borderRadius: '4px'
+                }}>
+                  <h3 style={{ margin: '0 0 5px 0', color: '#003366', fontSize: '16px' }}>{event.title}</h3>
+                  <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px' }}>{event.description}</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ margin: '0', color: '#999', fontSize: '11px' }}>
+                      {new Date(event.start_date).toLocaleDateString()} {event.end_date ? `- ${new Date(event.end_date).toLocaleDateString()}` : ''}
+                    </p>
+                    <button
+                      onClick={async () => {
+                        await supabase.from('calendar_events').delete().eq('id', event.id);
+                        fetchCalendarEvents();
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: '#ff6b6b',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '11px'
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {activeSection === 'certificates' && (
+          <div style={{
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '4px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}>
+            <h2 style={{ color: '#003366', marginBottom: '20px' }}>Certificate Issuance</h2>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#003366' }}>Select Student:</label>
+              <select
+                value={selectedStudentForCert?.id || ''}
+                onChange={(e) => {
+                  const student = students.find(s => s.id == e.target.value);
+                  setSelectedStudentForCert(student);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <option value="">-- Select a student --</option>
+                {students.map(student => (
+                  <option key={student.id} value={student.id}>
+                    {student.first_name} {student.last_name} (ID: {student.student_id})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {selectedStudentForCert && (
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#003366' }}>Select Certificate Type:</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+                  {[
+                    { type: 'admission', label: '📋 Admission Certificate' },
+                    { type: 'enrollment', label: '📚 Enrollment Certificate' },
+                    { type: 'graduation', label: '🎓 Graduation Certificate' },
+                    { type: 'transcript', label: '📊 Academic Transcript' },
+                    { type: 'tuition', label: '💳 Tuition Payment Receipt' }
+                  ].map(cert => (
+                    <button
+                      key={cert.type}
+                      onClick={() => setCertificateType(cert.type)}
+                      style={{
+                        padding: '15px',
+                        backgroundColor: certificateType === cert.type ? '#003366' : '#f5f5f5',
+                        color: certificateType === cert.type ? 'white' : '#003366',
+                        border: '2px solid #003366',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '12px',
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      {cert.label}
+                    </button>
+                  ))}
+                </div>
+                
+                {certificateType && (
+                  <div style={{
+                    backgroundColor: '#f9f9f9',
+                    padding: '30px',
+                    borderRadius: '4px',
+                    border: '2px solid #FFD700',
+                    marginBottom: '20px'
+                  }}>
+                    <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#003366', marginBottom: '10px' }}>Myanmar Christianity School</div>
+                      <div style={{ fontSize: '12px', color: '#666', marginBottom: '20px' }}>With Truth and Loyalty</div>
+                      <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#003366', marginBottom: '20px', textTransform: 'uppercase' }}>
+                        {certificateType === 'admission' && 'Admission Certificate'}
+                        {certificateType === 'enrollment' && 'Enrollment Certificate'}
+                        {certificateType === 'graduation' && 'Graduation Certificate'}
+                        {certificateType === 'transcript' && 'Academic Transcript'}
+                        {certificateType === 'tuition' && 'Tuition Payment Receipt'}
+                      </div>
+                    </div>
+                    
+                    <div style={{ borderTop: '2px solid #003366', borderBottom: '2px solid #003366', padding: '20px', marginBottom: '20px', textAlign: 'center' }}>
+                      <p style={{ margin: '0 0 10px 0', color: '#666' }}>This is to certify that</p>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: 'bold', color: '#003366' }}>
+                        {selectedStudentForCert.first_name} {selectedStudentForCert.last_name}
+                      </p>
+                      <p style={{ margin: '0', color: '#666', fontSize: '12px' }}>Student ID: {selectedStudentForCert.student_id}</p>
+                    </div>
+                    
+                    <div style={{ marginBottom: '20px', color: '#666', fontSize: '12px', lineHeight: '1.6' }}>
+                      {certificateType === 'admission' && <p>has been admitted to Myanmar Christianity School for the current academic year.</p>}
+                      {certificateType === 'enrollment' && <p>is currently enrolled as a student in good standing at Myanmar Christianity School.</p>}
+                      {certificateType === 'graduation' && <p>has successfully completed all requirements and is hereby certified as a graduate of Myanmar Christianity School.</p>}
+                      {certificateType === 'transcript' && <p>Academic performance records are maintained in our official records. This transcript certifies the student's academic standing.</p>}
+                      {certificateType === 'tuition' && <p>has fulfilled all tuition payment obligations for the current academic period.</p>}
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '40px', textAlign: 'center' }}>
+                      <div>
+                        <div style={{ borderTop: '1px solid #003366', paddingTop: '10px', fontSize: '11px', color: '#666' }}>Principal Signature</div>
+                      </div>
+                      <div>
+                        <div style={{ borderTop: '1px solid #003366', paddingTop: '10px', fontSize: '11px', color: '#666' }}>Date: {new Date().toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {certificateType && (
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                    <button
+                      onClick={() => window.print()}
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#003366',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '12px'
+                      }}
+                    >
+                      🖨️ Print Certificate
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCertificateType(null);
+                        setSelectedStudentForCert(null);
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#ddd',
+                        color: '#333',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Reset
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        
         {activeSection === 'about' && (
           <div style={{
             backgroundColor: 'white',
