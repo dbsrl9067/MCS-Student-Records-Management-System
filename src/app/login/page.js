@@ -278,7 +278,7 @@ export default function LoginPage() {
         fontSize: '12px',
         color: '#999'
       }}>
-        <p>&copy; 2024 Myanmar Christianity School. All rights reserved.</p>
+        <p>&copy; 2026 Myanmar Christianity School. All rights reserved.</p>
       </div>
     </div>
   );
