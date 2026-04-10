@@ -490,7 +490,7 @@ export default function MyanmarSIS() {
               marginBottom: '40px',
               backgroundImage: 'linear-gradient(135deg, #003366 0%, #0055A4 100%)'
             }}>
-              <h2 style={{ fontSize: '36px', margin: '0 0 10px 0', fontWeight: 'bold' }}>Student Information System</h2>
+              <h2 style={{ fontSize: '36px', margin: '0 0 10px 0', fontWeight: 'bold' }}>Member Information System</h2>
               <p style={{ fontSize: '16px', margin: '0', color: '#e0e0e0' }}>Myanmar Christianity School - Official Student & Staff Records Management</p>
             </div>
 
