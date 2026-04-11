@@ -28,10 +28,13 @@ export default function MyanmarSIS() {
   
   // Calendar states
   const [calendarEvents, setCalendarEvents] = useState([]);
+  const [eventCategories, setEventCategories] = useState([]);
   const [showAddEventForm, setShowAddEventForm] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
   const [showCalendarEventModal, setShowCalendarEventModal] = useState(false);
+  const [showCategoryManagement, setShowCategoryManagement] = useState(false);
+  const [newCategoryData, setNewCategoryData] = useState({ name: '', color: '#FFD700' });
   const [eventFormData, setEventFormData] = useState({
     title: '',
     description: '',
@@ -110,6 +113,7 @@ export default function MyanmarSIS() {
     if (user) {
       fetchData();
       fetchCalendarEvents();
+      fetchEventCategories();
     }
   }, [user]);
   
@@ -124,6 +128,55 @@ export default function MyanmarSIS() {
       setCalendarEvents(data || []);
     } catch (err) {
       console.error('Error fetching calendar events:', err);
+    }
+  };
+
+  const fetchEventCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('event_categories')
+        .select('*')
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
+      setEventCategories(data || []);
+    } catch (err) {
+      console.error('Error fetching event categories:', err);
+    }
+  };
+
+  const addEventCategory = async () => {
+    if (!newCategoryData.name.trim()) {
+      alert('Please enter category name');
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('event_categories')
+        .insert([{ name: newCategoryData.name, color: newCategoryData.color }]);
+      
+      if (error) throw error;
+      fetchEventCategories();
+      setNewCategoryData({ name: '', color: '#FFD700' });
+    } catch (err) {
+      alert('Error adding category: ' + err.message);
+    }
+  };
+
+  const deleteEventCategory = async (categoryId) => {
+    if (!confirm('Are you sure you want to delete this category?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('event_categories')
+        .delete()
+        .eq('id', categoryId);
+      
+      if (error) throw error;
+      fetchEventCategories();
+    } catch (err) {
+      alert('Error deleting category: ' + err.message);
     }
   };
 
@@ -1182,6 +1235,21 @@ export default function MyanmarSIS() {
               borderBottom: '2px solid #FFD700'
             }}>
               <button
+                onClick={() => setShowCategoryManagement(!showCategoryManagement)}
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: '#FFD700',
+                  color: '#003366',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  fontSize: '12px'
+                }}
+              >
+                ⚙️ Manage Categories
+              </button>
+              <button
                 onClick={() => {
                   const newDate = new Date(calendarMonth);
                   newDate.setMonth(newDate.getMonth() - 1);
@@ -1304,25 +1372,31 @@ export default function MyanmarSIS() {
                       </div>
                       
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {eventsOnDate.slice(0, 2).map((event, idx) => (
-                          <div
-                            key={idx}
-                            style={{
-                              backgroundColor: '#FFD700',
-                              color: '#003366',
-                              padding: '4px 6px',
-                              borderRadius: '3px',
-                              fontSize: '10px',
-                              fontWeight: 'bold',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
-                            }}
-                            title={event.title}
-                          >
-                            {event.title}
-                          </div>
-                        ))}
+                        {eventsOnDate.slice(0, 2).map((event, idx) => {
+                          const category = eventCategories.find(cat => cat.name === event.category);
+                          const bgColor = category ? category.color : '#FFD700';
+                          const textColor = bgColor === '#FFD700' ? '#003366' : 'white';
+                          
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                backgroundColor: bgColor,
+                                color: textColor,
+                                padding: '4px 6px',
+                                borderRadius: '3px',
+                                fontSize: '10px',
+                                fontWeight: 'bold',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                              title={event.title}
+                            >
+                              {event.title}
+                            </div>
+                          );
+                        })}}
                         {eventsOnDate.length > 2 && (
                           <div style={{
                             color: '#999',
@@ -1411,11 +1485,10 @@ export default function MyanmarSIS() {
                       fontSize: '14px'
                     }}
                   >
-                    <option value="Academic">Academic</option>
-                    <option value="Holiday">Holiday</option>
-                    <option value="Exam">Exam</option>
-                    <option value="Event">Event</option>
-                    <option value="Other">Other</option>
+                    <option value="">Select Category</option>
+                    {eventCategories.map((cat) => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))}
                   </select>
                   
                   <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
@@ -1466,6 +1539,137 @@ export default function MyanmarSIS() {
                       }}
                     >
                       Add Event
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Category Management Modal */}
+            {showCategoryManagement && (
+              <div style={{
+                position: 'fixed',
+                top: '0',
+                left: '0',
+                right: '0',
+                bottom: '0',
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: '1001'
+              }}>
+                <div style={{
+                  backgroundColor: 'white',
+                  padding: '30px',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  maxWidth: '600px',
+                  width: '90%',
+                  maxHeight: '80vh',
+                  overflowY: 'auto'
+                }}>
+                  <h3 style={{ color: '#003366', marginTop: '0' }}>Manage Event Categories</h3>
+                  
+                  {/* Add New Category */}
+                  <div style={{ marginBottom: '30px', paddingBottom: '20px', borderBottom: '2px solid #FFD700' }}>
+                    <h4 style={{ color: '#003366', marginTop: '0' }}>Add New Category</h4>
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                      <input
+                        type="text"
+                        placeholder="Category Name"
+                        value={newCategoryData.name}
+                        onChange={(e) => setNewCategoryData({...newCategoryData, name: e.target.value})}
+                        style={{
+                          flex: '1',
+                          padding: '10px',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box',
+                          fontSize: '14px'
+                        }}
+                      />
+                      <input
+                        type="color"
+                        value={newCategoryData.color}
+                        onChange={(e) => setNewCategoryData({...newCategoryData, color: e.target.value})}
+                        style={{
+                          width: '50px',
+                          height: '40px',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                      />
+                      <button
+                        onClick={addEventCategory}
+                        style={{
+                          padding: '10px 20px',
+                          backgroundColor: '#FFD700',
+                          color: '#003366',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Existing Categories */}
+                  <div>
+                    <h4 style={{ color: '#003366', marginTop: '0' }}>Existing Categories</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '15px' }}>
+                      {eventCategories.map((cat) => (
+                        <div
+                          key={cat.id}
+                          style={{
+                            padding: '15px',
+                            border: '2px solid #ddd',
+                            borderRadius: '4px',
+                            backgroundColor: cat.color,
+                            color: cat.color === '#FFD700' ? '#003366' : 'white',
+                            textAlign: 'center',
+                            position: 'relative'
+                          }}
+                        >
+                          <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>{cat.name}</div>
+                          <button
+                            onClick={() => deleteEventCategory(cat.id)}
+                            style={{
+                              padding: '5px 10px',
+                              backgroundColor: 'rgba(255, 77, 77, 0.8)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                    <button
+                      onClick={() => setShowCategoryManagement(false)}
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#ddd',
+                        color: '#333',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      Close
                     </button>
                   </div>
                 </div>
