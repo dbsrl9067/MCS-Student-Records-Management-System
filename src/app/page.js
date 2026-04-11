@@ -29,6 +29,9 @@ export default function MyanmarSIS() {
   // Calendar states
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [showAddEventForm, setShowAddEventForm] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
+  const [showCalendarEventModal, setShowCalendarEventModal] = useState(false);
   const [eventFormData, setEventFormData] = useState({
     title: '',
     description: '',
@@ -1169,122 +1172,308 @@ export default function MyanmarSIS() {
             borderRadius: '4px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ color: '#003366', margin: '0' }}>Academic Calendar</h2>
+            {/* Calendar Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '30px',
+              paddingBottom: '20px',
+              borderBottom: '2px solid #FFD700'
+            }}>
               <button
-                onClick={() => setShowAddEventForm(!showAddEventForm)}
+                onClick={() => {
+                  const newDate = new Date(calendarMonth);
+                  newDate.setMonth(newDate.getMonth() - 1);
+                  setCalendarMonth(newDate);
+                }}
                 style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#FFD700',
-                  color: '#003366',
+                  padding: '8px 12px',
+                  backgroundColor: '#003366',
+                  color: 'white',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  fontWeight: 'bold',
-                  fontSize: '12px'
+                  fontWeight: 'bold'
                 }}
               >
-                {showAddEventForm ? 'Cancel' : '+ Add Event'}
+                ← Previous
+              </button>
+              
+              <h2 style={{ color: '#003366', margin: '0', fontSize: '24px' }}>
+                {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][calendarMonth.getMonth()]} {calendarMonth.getFullYear()}
+              </h2>
+              
+              <button
+                onClick={() => {
+                  const newDate = new Date(calendarMonth);
+                  newDate.setMonth(newDate.getMonth() + 1);
+                  setCalendarMonth(newDate);
+                }}
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: '#003366',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                Next →
               </button>
             </div>
             
-            {showAddEventForm && (
-              <div style={{ backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '4px', marginBottom: '20px' }}>
-                <input
-                  type="text"
-                  placeholder="Event Title"
-                  value={eventFormData.title}
-                  onChange={(e) => setEventFormData({...eventFormData, title: e.target.value})}
-                  style={{ width: '100%', padding: '8px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box' }}
-                />
-                <textarea
-                  placeholder="Description"
-                  value={eventFormData.description}
-                  onChange={(e) => setEventFormData({...eventFormData, description: e.target.value})}
-                  style={{ width: '100%', padding: '8px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '4px', boxSizing: 'border-box', minHeight: '80px' }}
-                />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                  <input
-                    type="date"
-                    value={eventFormData.start_date}
-                    onChange={(e) => setEventFormData({...eventFormData, start_date: e.target.value})}
-                    style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                  />
-                  <input
-                    type="date"
-                    value={eventFormData.end_date}
-                    onChange={(e) => setEventFormData({...eventFormData, end_date: e.target.value})}
-                    style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                  />
-                </div>
-                <button
-                  onClick={async () => {
-                    if (!eventFormData.title || !eventFormData.start_date) {
-                      alert('Please fill in required fields');
-                      return;
-                    }
-                    const { error } = await supabase.from('calendar_events').insert([eventFormData]);
-                    if (error) {
-                      alert('Error adding event: ' + error.message);
-                    } else {
-                      fetchCalendarEvents();
-                      setEventFormData({ title: '', description: '', start_date: '', end_date: '', category: 'Academic' });
-                      setShowAddEventForm(false);
-                    }
-                  }}
+            {/* Day Names */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              gap: '1px',
+              backgroundColor: '#ddd',
+              marginBottom: '1px'
+            }}>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <div
+                  key={day}
                   style={{
-                    padding: '8px 16px',
                     backgroundColor: '#003366',
                     color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold'
+                    padding: '12px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '12px'
                   }}
                 >
-                  Save Event
-                </button>
-              </div>
-            )}
-            
-            <div style={{ display: 'grid', gap: '10px' }}>
-              {calendarEvents.map((event) => (
-                <div key={event.id} style={{
-                  backgroundColor: '#f5f5f5',
-                  padding: '15px',
-                  borderLeft: '4px solid #FFD700',
-                  borderRadius: '4px'
-                }}>
-                  <h3 style={{ margin: '0 0 5px 0', color: '#003366', fontSize: '16px' }}>{event.title}</h3>
-                  <p style={{ margin: '0 0 5px 0', color: '#666', fontSize: '12px' }}>{event.description}</p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ margin: '0', color: '#999', fontSize: '11px' }}>
-                      {new Date(event.start_date).toLocaleDateString()} {event.end_date ? `- ${new Date(event.end_date).toLocaleDateString()}` : ''}
-                    </p>
-                    <button
-                      onClick={async () => {
-                        await supabase.from('calendar_events').delete().eq('id', event.id);
-                        fetchCalendarEvents();
-                      }}
-                      style={{
-                        padding: '4px 8px',
-                        backgroundColor: '#ff6b6b',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '11px'
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
+                  {day}
                 </div>
               ))}
             </div>
+            
+            {/* Calendar Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, 1fr)',
+              gap: '1px',
+              backgroundColor: '#ddd'
+            }}>
+              {(() => {
+                const daysInMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
+                const firstDay = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1).getDay();
+                const days = [];
+                
+                for (let i = 0; i < firstDay; i++) days.push(null);
+                for (let i = 1; i <= daysInMonth; i++) days.push(i);
+                
+                return days.map((day, index) => {
+                  const isCurrentMonth = day !== null;
+                  const dateObj = isCurrentMonth ? new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day) : null;
+                  const eventsOnDate = isCurrentMonth ? calendarEvents.filter(event => {
+                    const eventDate = new Date(event.start_date);
+                    return eventDate.toDateString() === dateObj.toDateString();
+                  }) : [];
+                  
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        if (isCurrentMonth) {
+                          setSelectedCalendarDate(dateObj);
+                          setShowCalendarEventModal(true);
+                        }
+                      }}
+                      style={{
+                        backgroundColor: isCurrentMonth ? 'white' : '#f5f5f5',
+                        padding: '12px',
+                        minHeight: '100px',
+                        border: '1px solid #ddd',
+                        cursor: isCurrentMonth ? 'pointer' : 'default',
+                        transition: 'all 0.3s ease',
+                        borderTop: isCurrentMonth ? '3px solid #FFD700' : '3px solid transparent',
+                        position: 'relative'
+                      }}
+                      onMouseEnter={(e) => isCurrentMonth && (e.currentTarget.style.backgroundColor = '#f0f8ff')}
+                      onMouseLeave={(e) => isCurrentMonth && (e.currentTarget.style.backgroundColor = 'white')}
+                    >
+                      <div style={{
+                        fontWeight: 'bold',
+                        color: '#003366',
+                        marginBottom: '8px',
+                        fontSize: '14px'
+                      }}>
+                        {day}
+                      </div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        {eventsOnDate.slice(0, 2).map((event, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              backgroundColor: '#FFD700',
+                              color: '#003366',
+                              padding: '4px 6px',
+                              borderRadius: '3px',
+                              fontSize: '10px',
+                              fontWeight: 'bold',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                            title={event.title}
+                          >
+                            {event.title}
+                          </div>
+                        ))}
+                        {eventsOnDate.length > 2 && (
+                          <div style={{
+                            color: '#999',
+                            fontSize: '9px',
+                            fontStyle: 'italic'
+                          }}>
+                            +{eventsOnDate.length - 2} more
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            
+            {/* Event Modal */}
+            {showCalendarEventModal && (
+              <div style={{
+                position: 'fixed',
+                top: '0',
+                left: '0',
+                right: '0',
+                bottom: '0',
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: '1000'
+              }}>
+                <div style={{
+                  backgroundColor: 'white',
+                  padding: '30px',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  maxWidth: '500px',
+                  width: '90%'
+                }}>
+                  <h3 style={{ color: '#003366', marginTop: '0' }}>
+                    Add Event - {selectedCalendarDate?.toLocaleDateString()}
+                  </h3>
+                  
+                  <input
+                    type="text"
+                    placeholder="Event Title"
+                    value={eventFormData.title}
+                    onChange={(e) => setEventFormData({...eventFormData, title: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      marginBottom: '15px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      boxSizing: 'border-box',
+                      fontSize: '14px'
+                    }}
+                  />
+                  
+                  <textarea
+                    placeholder="Description (optional)"
+                    value={eventFormData.description}
+                    onChange={(e) => setEventFormData({...eventFormData, description: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      marginBottom: '15px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      boxSizing: 'border-box',
+                      fontSize: '14px',
+                      minHeight: '80px',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                  
+                  <select
+                    value={eventFormData.category}
+                    onChange={(e) => setEventFormData({...eventFormData, category: e.target.value})}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      marginBottom: '20px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      boxSizing: 'border-box',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="Academic">Academic</option>
+                    <option value="Holiday">Holiday</option>
+                    <option value="Exam">Exam</option>
+                    <option value="Event">Event</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => setShowCalendarEventModal(false)}
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#ddd',
+                        color: '#333',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!eventFormData.title) {
+                          alert('Please enter event title');
+                          return;
+                        }
+                        const eventData = {
+                          title: eventFormData.title,
+                          description: eventFormData.description,
+                          start_date: selectedCalendarDate.toISOString().split('T')[0],
+                          end_date: selectedCalendarDate.toISOString().split('T')[0],
+                          category: eventFormData.category
+                        };
+                        const { error } = await supabase.from('calendar_events').insert([eventData]);
+                        if (error) {
+                          alert('Error adding event: ' + error.message);
+                        } else {
+                          fetchCalendarEvents();
+                          setShowCalendarEventModal(false);
+                          setEventFormData({ title: '', description: '', start_date: '', end_date: '', category: 'Academic' });
+                        }
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#FFD700',
+                        color: '#003366',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      Add Event
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
-        
+
         {activeSection === 'certificates' && (
           <div style={{
             backgroundColor: 'white',
