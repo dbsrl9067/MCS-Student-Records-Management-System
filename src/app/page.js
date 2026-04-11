@@ -1396,7 +1396,7 @@ export default function MyanmarSIS() {
                               {event.title}
                             </div>
                           );
-                        })}}
+                        })}
                         {eventsOnDate.length > 2 && (
                           <div style={{
                             color: '#999',
